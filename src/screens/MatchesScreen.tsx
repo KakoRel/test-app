@@ -11,6 +11,7 @@ import {
 import { FilterTabs } from '../components/FilterTabs';
 import { MatchCard } from '../components/MatchCard';
 import { UpdatedAgo } from '../components/UpdatedAgo';
+import { useFavorites } from '../hooks/useFavorites';
 import { useMatches } from '../hooks/useMatches';
 import { matchesFilter, type MatchFilter } from '../matches';
 
@@ -18,6 +19,7 @@ import { matchesFilter, type MatchFilter } from '../matches';
 export function MatchesScreen() {
   const { matches, error, loading, refreshing, updatedAt, retry, refresh } = useMatches();
   const [filter, setFilter] = useState<MatchFilter>('all');
+  const { favorites, isFavorite, toggle } = useFavorites();
 
   const visibleMatches = useMemo(
     () => (matches ?? []).filter((match) => matchesFilter(match, filter)),
@@ -76,7 +78,10 @@ export function MatchesScreen() {
       <FlatList
         data={visibleMatches}
         keyExtractor={(match) => match.id}
-        renderItem={({ item }) => <MatchCard match={item} />}
+        renderItem={({ item }) => (
+          <MatchCard match={item} favorite={isFavorite(item.id)} onToggleFavorite={toggle} />
+        )}
+        extraData={favorites}
         ItemSeparatorComponent={Separator}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}

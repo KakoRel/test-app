@@ -1,12 +1,15 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatScore, formatStartsAt, statusLabel } from '../matches';
 import type { Match } from '../types';
+import { FavoriteButton } from './FavoriteButton';
 
 type Props = {
   match: Match;
+  favorite: boolean;
+  onToggleFavorite: (id: string) => void;
 };
 
-export function MatchCard({ match }: Props) {
+export function MatchCard({ match, favorite, onToggleFavorite }: Props) {
   const score = formatScore(match);
   const isLive = match.status === 'live';
 
@@ -14,6 +17,7 @@ export function MatchCard({ match }: Props) {
     <View style={styles.card}>
       <View style={styles.header}>
         <Text style={[styles.status, isLive && styles.live]}>{statusLabel(match)}</Text>
+        <FavoriteButton active={favorite} onPress={() => onToggleFavorite(match.id)} />
       </View>
       <View style={styles.teams}>
         <Text style={styles.team} numberOfLines={2}>
