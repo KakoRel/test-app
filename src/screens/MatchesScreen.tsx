@@ -6,6 +6,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { FilterTabs } from '../components/FilterTabs';
@@ -13,17 +14,21 @@ import { MatchCard } from '../components/MatchCard';
 import { UpdatedAgo } from '../components/UpdatedAgo';
 import { useFavorites } from '../hooks/useFavorites';
 import { useMatches } from '../hooks/useMatches';
-import { matchesFilter, type MatchFilter } from '../matches';
+import { matchesFilter, matchesQuery, type MatchFilter } from '../matches';
 
 // Экран «Матчи тура» — задание в README.md, часть 1.
 export function MatchesScreen() {
   const { matches, error, loading, refreshing, updatedAt, retry, refresh } = useMatches();
   const [filter, setFilter] = useState<MatchFilter>('all');
+  const [query, setQuery] = useState('');
   const { favorites, isFavorite, toggle } = useFavorites();
 
   const visibleMatches = useMemo(
-    () => (matches ?? []).filter((match) => matchesFilter(match, filter)),
-    [matches, filter],
+    () =>
+      (matches ?? []).filter(
+        (match) => matchesFilter(match, filter) && matchesQuery(match, query),
+      ),
+    [matches, filter, query],
   );
 
   if (loading) {
@@ -73,6 +78,17 @@ export function MatchesScreen() {
         </View>
       )}
 
+      <TextInput
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Поиск по клубу"
+        placeholderTextColor="#9ca3af"
+        style={styles.search}
+        autoCorrect={false}
+        clearButtonMode="while-editing"
+        accessibilityLabel="Поиск по названию клуба"
+      />
+
       <FilterTabs value={filter} onChange={setFilter} />
 
       <FlatList
@@ -88,9 +104,7 @@ export function MatchesScreen() {
         ListEmptyComponent={
           <View style={styles.center}>
             <Text style={styles.hint}>
-              {matches.length === 0
-                ? 'В этом туре пока нет матчей'
-                : 'Нет матчей с таким статусом'}
+              {emptyMessage(matches.length, query)}
             </Text>
           </View>
         }
@@ -106,6 +120,16 @@ function Screen({ children }: { children: ReactNode }) {
       {children}
     </View>
   );
+}
+
+function emptyMessage(totalMatches: number, query: string) {
+  if (totalMatches === 0) {
+    return 'В этом туре пока нет матчей';
+  }
+  if (query.trim()) {
+    return `Нет матчей с клубом «${query.trim()}»`;
+  }
+  return 'Нет матчей с таким статусом';
 }
 
 function Separator() {
@@ -137,6 +161,14 @@ const styles = StyleSheet.create({
   },
   disabled: {
     color: '#9ca3af',
+  },
+  search: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    fontSize: 15,
   },
   banner: {
     padding: 10,

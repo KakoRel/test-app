@@ -33,6 +33,18 @@ export function matchesFilter(match: Match, filter: MatchFilter): boolean {
   }
 }
 
+function normalize(text: string) {
+  return text.trim().toLocaleLowerCase('ru-RU').replaceAll('ё', 'е');
+}
+
+export function matchesQuery(match: Match, query: string): boolean {
+  const needle = normalize(query);
+  if (!needle) {
+    return true;
+  }
+  return [match.home.name, match.away.name].some((name) => normalize(name).includes(needle));
+}
+
 export function statusLabel(match: Match): string {
   switch (match.status) {
     case 'scheduled':
