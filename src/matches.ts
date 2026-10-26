@@ -13,6 +13,26 @@ export async function fetchMatches(signal?: AbortSignal): Promise<MatchesRespons
   return { round: data.round ?? 0, matches: data.matches };
 }
 
+export type MatchFilter = 'all' | 'upcoming' | 'finished';
+
+export const FILTERS: { value: MatchFilter; label: string }[] = [
+  { value: 'all', label: 'Все' },
+  { value: 'upcoming', label: 'Предстоящие' },
+  { value: 'finished', label: 'Завершённые' },
+];
+
+// live и postponed не попадают ни в «Предстоящие», ни в «Завершённые»: только во «Все».
+export function matchesFilter(match: Match, filter: MatchFilter): boolean {
+  switch (filter) {
+    case 'all':
+      return true;
+    case 'upcoming':
+      return match.status === 'scheduled';
+    case 'finished':
+      return match.status === 'finished';
+  }
+}
+
 export function statusLabel(match: Match): string {
   switch (match.status) {
     case 'scheduled':

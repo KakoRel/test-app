@@ -1,46 +1,104 @@
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState, type ReactNode } from 'react';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { FilterTabs } from '../components/FilterTabs';
 import { MatchCard } from '../components/MatchCard';
+import { UpdatedAgo } from '../components/UpdatedAgo';
 import { useMatches } from '../hooks/useMatches';
+import { matchesFilter, type MatchFilter } from '../matches';
 
 // Экран «Матчи тура» — задание в README.md, часть 1.
 export function MatchesScreen() {
-  const { state, reload } = useMatches();
+  const { matches, error, loading, refreshing, updatedAt, retry, refresh } = useMatches();
+  const [filter, setFilter] = useState<MatchFilter>('all');
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Матчи тура</Text>
+  const visibleMatches = useMemo(
+    () => (matches ?? []).filter((match) => matchesFilter(match, filter)),
+    [matches, filter],
+  );
 
-      {state.status === 'loading' && (
+  if (loading) {
+    return (
+      <Screen>
         <View style={styles.center}>
           <ActivityIndicator size="large" />
           <Text style={styles.hint}>Загружаем матчи…</Text>
         </View>
-      )}
+      </Screen>
+    );
+  }
 
-      {state.status === 'error' && (
+  if (!matches) {
+    return (
+      <Screen>
         <View style={styles.center}>
           <Text style={styles.errorTitle}>Не удалось загрузить матчи</Text>
-          <Text style={styles.hint}>{state.message}</Text>
-          <Pressable style={styles.button} onPress={reload} accessibilityRole="button">
+          {error && <Text style={styles.hint}>{error}</Text>}
+          <Pressable style={styles.button} onPress={retry} accessibilityRole="button">
             <Text style={styles.buttonText}>Повторить</Text>
           </Pressable>
         </View>
+      </Screen>
+    );
+  }
+
+  return (
+    <Screen>
+      <View style={styles.toolbar}>
+        {updatedAt && <UpdatedAgo since={updatedAt} />}
+        <Pressable
+          onPress={refresh}
+          disabled={refreshing}
+          accessibilityRole="button"
+          style={styles.refreshButton}
+        >
+          <Text style={[styles.refreshText, refreshing && styles.disabled]}>
+            {refreshing ? 'Обновляем…' : 'Обновить'}
+          </Text>
+        </Pressable>
+      </View>
+
+      {error && (
+        <View style={styles.banner}>
+          <Text style={styles.bannerText}>Не удалось обновить: {error}</Text>
+        </View>
       )}
 
-      {state.status === 'success' && (
-        <FlatList
-          data={state.matches}
-          keyExtractor={(match) => match.id}
-          renderItem={({ item }) => <MatchCard match={item} />}
-          ItemSeparatorComponent={Separator}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.center}>
-              <Text style={styles.hint}>В этом туре пока нет матчей</Text>
-            </View>
-          }
-        />
-      )}
+      <FilterTabs value={filter} onChange={setFilter} />
+
+      <FlatList
+        data={visibleMatches}
+        keyExtractor={(match) => match.id}
+        renderItem={({ item }) => <MatchCard match={item} />}
+        ItemSeparatorComponent={Separator}
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        ListEmptyComponent={
+          <View style={styles.center}>
+            <Text style={styles.hint}>
+              {matches.length === 0
+                ? 'В этом туре пока нет матчей'
+                : 'Нет матчей с таким статусом'}
+            </Text>
+          </View>
+        }
+      />
+    </Screen>
+  );
+}
+
+function Screen({ children }: { children: ReactNode }) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Матчи тура</Text>
+      {children}
     </View>
   );
 }
@@ -58,6 +116,31 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
+  },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  refreshButton: {
+    paddingVertical: 4,
+  },
+  refreshText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2563eb',
+  },
+  disabled: {
+    color: '#9ca3af',
+  },
+  banner: {
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#fef2f2',
+  },
+  bannerText: {
+    fontSize: 13,
+    color: '#b91c1c',
   },
   center: {
     flex: 1,
